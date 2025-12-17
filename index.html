@@ -6,140 +6,129 @@
 <title>My To-Do List</title>
 
 <style>
-    * {
-        box-sizing: border-box;
-        touch-action: manipulation;
-    }
+* {
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
 
-    body {
-        font-family: Arial, sans-serif;
-        padding: 16px;
-        max-width: 600px;
-        margin: auto;
-    }
+body {
+    font-family: Arial, sans-serif;
+    padding: 16px;
+    max-width: 600px;
+    margin: auto;
+}
 
-    h1 {
-        text-align: center;
-        margin-bottom: 20px;
-    }
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-    p {
-        font-size: 20px;
-    }
+p {
+    font-size: 20px;
+}
 
-    ul {
-        list-style: none;
-        padding: 0;
-    }
+ul {
+    list-style: none;
+    padding: 0;
+}
 
-    li {
-        margin: 12px 0;
-        padding: 14px;
-        background-color: #f4f4f4;
-        border-radius: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        font-size: 18px;
+li {
+    --swipeX: 0px;
 
-        opacity: 0;
-        transform: translateY(15px) scale(0.98);
-        transition: transform 0.3s ease, opacity 0.3s ease;
-        will-change: transform, opacity;
-        touch-action: pan-y;
-    }
+    margin: 12px 0;
+    padding: 14px;
+    background-color: #f4f4f4;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 18px;
 
-    li.show {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    opacity: 0;
+    transform: translateY(15px) scale(0.98) translateX(var(--swipeX));
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    will-change: transform, opacity;
+    touch-action: pan-y;
+}
 
-    li.remove {
-        opacity: 0;
-        transform: translateX(-100%) scale(0.95);
-    }
+li.show {
+    opacity: 1;
+    transform: translateY(0) scale(1) translateX(var(--swipeX));
+}
 
-    .btnRow {
-        display: flex;
-        gap: 10px;
-    }
+li.remove {
+    opacity: 0;
+    transform: translateX(-120%) scale(0.95);
+}
 
-    button {
-        flex: 1;
-        min-height: 44px;
-        font-size: 16px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: transform 0.15s ease;
-    }
+.btnRow {
+    display: flex;
+    gap: 10px;
+}
 
-    button:active {
-        transform: scale(0.95);
-    }
+button {
+    flex: 1;
+    min-height: 44px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
 
-    .deadlineBtn {
-        background-color: #333;
-        color: white;
-    }
+button:active {
+    transform: scale(0.95);
+}
 
-    .clearBtn {
-        background-color: red;
-        color: white;
-    }
+.deadlineBtn {
+    background-color: #333;
+    color: white;
+}
 
-    input {
-        width: 100%;
-        padding: 12px;
-        font-size: 16px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        margin-bottom: 10px;
-    }
+.clearBtn {
+    background-color: red;
+    color: white;
+}
 
-    #addBtn {
-        width: 100%;
-        padding: 14px;
-        font-size: 18px;
-        background-color: #007bff;
-        color: white;
-        border-radius: 10px;
-    }
+input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+
+#addBtn {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 10px;
+}
 </style>
-
-<link rel="icon" href="favicon.png">
 </head>
 
 <body>
 
 <h1>My To-Do List</h1>
-
 <ul id="tasklist"></ul>
 
 <p>Add your task:</p>
-<input type="text" id="newTask" placeholder="Type your task here">
+<input id="newTask" placeholder="Type your task here">
 <button id="addBtn">Add Task</button>
 
 <script>
-Notification.requestPermission();
-
 const input = document.getElementById("newTask");
 const addBtn = document.getElementById("addBtn");
 const list = document.getElementById("tasklist");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-let deadlines = JSON.parse(localStorage.getItem("deadlines")) || {};
 
-function onPress(el, fn) {
-    el.addEventListener("pointerdown", e => {
-        e.preventDefault();
-        fn(e);
-    });
-}
-
-function enableSwipeToDelete(li, taskText) {
+function enableSwipe(li, taskText) {
     let startX = 0;
-    let currentX = 0;
+    let dx = 0;
     let dragging = false;
 
     li.addEventListener("pointerdown", e => {
@@ -151,91 +140,51 @@ function enableSwipeToDelete(li, taskText) {
 
     li.addEventListener("pointermove", e => {
         if (!dragging) return;
-        currentX = e.clientX - startX;
-        if (currentX < 0) {
-            li.style.transform = `translateX(${currentX}px)`;
+        dx = e.clientX - startX;
+        if (dx < 0) {
+            li.style.setProperty("--swipeX", dx + "px");
         }
     });
 
     li.addEventListener("pointerup", () => {
         dragging = false;
-        li.style.transition = "transform 0.3s ease";
+        li.style.transition = "";
 
-        if (currentX < -100) {
+        if (dx < -100) {
             li.classList.add("remove");
             setTimeout(() => {
                 list.removeChild(li);
             }, 300);
 
             tasks = tasks.filter(t => t !== taskText);
-            delete deadlines[taskText];
             localStorage.setItem("tasks", JSON.stringify(tasks));
-            localStorage.setItem("deadlines", JSON.stringify(deadlines));
         } else {
-            li.style.transform = "";
+            li.style.setProperty("--swipeX", "0px");
         }
     });
 }
 
-function createTask(taskText) {
+function createTask(text) {
     const li = document.createElement("li");
+    li.textContent = text;
 
-    const text = document.createElement("div");
-    text.textContent = taskText;
-
-    const btnRow = document.createElement("div");
-    btnRow.className = "btnRow";
-
-    const deadlineBtn = document.createElement("button");
-    deadlineBtn.textContent = "Set Deadline";
-    deadlineBtn.className = "deadlineBtn";
-
-    onPress(deadlineBtn, () => {
-        const time = prompt("Enter deadline (YYYY-MM-DD HH:MM)");
-        if (!time) return;
-
-        const timestamp = new Date(time).getTime();
-        if (isNaN(timestamp)) return alert("Invalid date");
-
-        deadlines[taskText] = timestamp;
-        localStorage.setItem("deadlines", JSON.stringify(deadlines));
-        alert("Deadline set!");
-    });
-
-    const clearBtn = document.createElement("button");
-    clearBtn.textContent = "Clear Task";
-    clearBtn.className = "clearBtn";
-
-    onPress(clearBtn, () => {
-        li.classList.add("remove");
-        setTimeout(() => list.removeChild(li), 300);
-
-        tasks = tasks.filter(t => t !== taskText);
-        delete deadlines[taskText];
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        localStorage.setItem("deadlines", JSON.stringify(deadlines));
-    });
-
-    btnRow.append(deadlineBtn, clearBtn);
-    li.append(text, btnRow);
     list.appendChild(li);
-
-    enableSwipeToDelete(li, taskText);
+    enableSwipe(li, text);
 
     requestAnimationFrame(() => li.classList.add("show"));
 }
 
 tasks.forEach(createTask);
 
-onPress(addBtn, () => {
-    const taskText = input.value.trim();
-    if (!taskText) return;
+addBtn.onclick = () => {
+    const text = input.value.trim();
+    if (!text) return;
 
-    tasks.push(taskText);
+    tasks.push(text);
     localStorage.setItem("tasks", JSON.stringify(tasks));
-    createTask(taskText);
+    createTask(text);
     input.value = "";
-});
+};
 </script>
 
 </body>
