@@ -42,11 +42,11 @@
         gap: 10px;
         font-size: 18px;
 
-        /* animation base */
         opacity: 0;
         transform: translateY(15px) scale(0.98);
-        transition: opacity 0.35s ease, transform 0.35s ease;
+        transition: transform 0.3s ease, opacity 0.3s ease;
         will-change: transform, opacity;
+        touch-action: pan-y;
     }
 
     li.show {
@@ -56,7 +56,7 @@
 
     li.remove {
         opacity: 0;
-        transform: translateX(-20px) scale(0.95);
+        transform: translateX(-100%) scale(0.95);
     }
 
     .btnRow {
@@ -78,12 +78,12 @@
         transform: scale(0.95);
     }
 
-    button.deadlineBtn {
+    .deadlineBtn {
         background-color: #333;
         color: white;
     }
 
-    button.clearBtn {
+    .clearBtn {
         background-color: red;
         color: white;
     }
@@ -97,7 +97,7 @@
         margin-bottom: 10px;
     }
 
-    button#addBtn {
+    #addBtn {
         width: 100%;
         padding: 14px;
         font-size: 18px;
@@ -107,7 +107,7 @@
     }
 </style>
 
-<link rel="icon" href="favicon.png" type="image/png">
+<link rel="icon" href="favicon.png">
 </head>
 
 <body>
@@ -130,11 +130,50 @@ const list = document.getElementById("tasklist");
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 let deadlines = JSON.parse(localStorage.getItem("deadlines")) || {};
 
-// unified pointer handler
-function onPress(element, handler) {
-    element.addEventListener("pointerdown", (e) => {
+function onPress(el, fn) {
+    el.addEventListener("pointerdown", e => {
         e.preventDefault();
-        handler(e);
+        fn(e);
+    });
+}
+
+function enableSwipeToDelete(li, taskText) {
+    let startX = 0;
+    let currentX = 0;
+    let dragging = false;
+
+    li.addEventListener("pointerdown", e => {
+        startX = e.clientX;
+        dragging = true;
+        li.setPointerCapture(e.pointerId);
+        li.style.transition = "none";
+    });
+
+    li.addEventListener("pointermove", e => {
+        if (!dragging) return;
+        currentX = e.clientX - startX;
+        if (currentX < 0) {
+            li.style.transform = `translateX(${currentX}px)`;
+        }
+    });
+
+    li.addEventListener("pointerup", () => {
+        dragging = false;
+        li.style.transition = "transform 0.3s ease";
+
+        if (currentX < -100) {
+            li.classList.add("remove");
+            setTimeout(() => {
+                list.removeChild(li);
+            }, 300);
+
+            tasks = tasks.filter(t => t !== taskText);
+            delete deadlines[taskText];
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            localStorage.setItem("deadlines", JSON.stringify(deadlines));
+        } else {
+            li.style.transform = "";
+        }
     });
 }
 
@@ -152,15 +191,11 @@ function createTask(taskText) {
     deadlineBtn.className = "deadlineBtn";
 
     onPress(deadlineBtn, () => {
-        alert("IMPORTANT: Keep this tab open for notifications.");
         const time = prompt("Enter deadline (YYYY-MM-DD HH:MM)");
         if (!time) return;
 
         const timestamp = new Date(time).getTime();
-        if (isNaN(timestamp)) {
-            alert("Invalid date.");
-            return;
-        }
+        if (isNaN(timestamp)) return alert("Invalid date");
 
         deadlines[taskText] = timestamp;
         localStorage.setItem("deadlines", JSON.stringify(deadlines));
@@ -172,34 +207,24 @@ function createTask(taskText) {
     clearBtn.className = "clearBtn";
 
     onPress(clearBtn, () => {
-        if (!confirm("Clear this task?")) return;
-
         li.classList.add("remove");
-
-        setTimeout(() => {
-            list.removeChild(li);
-        }, 350);
+        setTimeout(() => list.removeChild(li), 300);
 
         tasks = tasks.filter(t => t !== taskText);
         delete deadlines[taskText];
-
         localStorage.setItem("tasks", JSON.stringify(tasks));
         localStorage.setItem("deadlines", JSON.stringify(deadlines));
     });
 
-    btnRow.appendChild(deadlineBtn);
-    btnRow.appendChild(clearBtn);
-
-    li.appendChild(text);
-    li.appendChild(btnRow);
+    btnRow.append(deadlineBtn, clearBtn);
+    li.append(text, btnRow);
     list.appendChild(li);
 
-    requestAnimationFrame(() => {
-        li.classList.add("show");
-    });
+    enableSwipeToDelete(li, taskText);
+
+    requestAnimationFrame(() => li.classList.add("show"));
 }
 
-// load saved tasks with animation
 tasks.forEach(createTask);
 
 onPress(addBtn, () => {
@@ -208,22 +233,9 @@ onPress(addBtn, () => {
 
     tasks.push(taskText);
     localStorage.setItem("tasks", JSON.stringify(tasks));
-
     createTask(taskText);
     input.value = "";
 });
-
-setInterval(() => {
-    const now = Date.now();
-
-    for (let task in deadlines) {
-        if (now >= deadlines[task]) {
-            new Notification("Task Reminder!", { body: task });
-            delete deadlines[task];
-            localStorage.setItem("deadlines", JSON.stringify(deadlines));
-        }
-    }
-}, 1000);
 </script>
 
 </body>
