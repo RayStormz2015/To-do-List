@@ -41,6 +41,22 @@
         flex-direction: column;
         gap: 10px;
         font-size: 18px;
+
+        /* animation base */
+        opacity: 0;
+        transform: translateY(15px) scale(0.98);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        will-change: transform, opacity;
+    }
+
+    li.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    li.remove {
+        opacity: 0;
+        transform: translateX(-20px) scale(0.95);
     }
 
     .btnRow {
@@ -55,6 +71,11 @@
         border: none;
         border-radius: 8px;
         cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+
+    button:active {
+        transform: scale(0.95);
     }
 
     button.deadlineBtn {
@@ -109,7 +130,7 @@ const list = document.getElementById("tasklist");
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 let deadlines = JSON.parse(localStorage.getItem("deadlines")) || {};
 
-// Unified pointer handler
+// unified pointer handler
 function onPress(element, handler) {
     element.addEventListener("pointerdown", (e) => {
         e.preventDefault();
@@ -153,7 +174,12 @@ function createTask(taskText) {
     onPress(clearBtn, () => {
         if (!confirm("Clear this task?")) return;
 
-        list.removeChild(li);
+        li.classList.add("remove");
+
+        setTimeout(() => {
+            list.removeChild(li);
+        }, 350);
+
         tasks = tasks.filter(t => t !== taskText);
         delete deadlines[taskText];
 
@@ -167,8 +193,13 @@ function createTask(taskText) {
     li.appendChild(text);
     li.appendChild(btnRow);
     list.appendChild(li);
+
+    requestAnimationFrame(() => {
+        li.classList.add("show");
+    });
 }
 
+// load saved tasks with animation
 tasks.forEach(createTask);
 
 onPress(addBtn, () => {
@@ -197,4 +228,3 @@ setInterval(() => {
 
 </body>
 </html>
-
