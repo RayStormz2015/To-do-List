@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+<link rel="icon" type="image/png" href="favicon.png">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My To-Do List</title>
+<link rel="icon" type="image/png" href="favicon.png">
 
 <style>
 * {
@@ -130,31 +132,54 @@ let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 function enableSwipe(li, taskText) {
     let startX = 0;
     let dx = 0;
-    let dragging = false;
 
-    li.addEventListener("pointerdown", e => {
+    // --- TOUCH (iOS) ---
+    li.addEventListener("touchstart", e => {
+        startX = e.touches[0].clientX;
+        li.style.transition = "none";
+    }, { passive: true });
+
+    li.addEventListener("touchmove", e => {
+        dx = e.touches[0].clientX - startX;
+        if (dx < 0) {
+            li.style.setProperty("--swipeX", dx + "px");
+        }
+    }, { passive: true });
+
+    li.addEventListener("touchend", () => {
+        finishSwipe();
+    });
+
+    // --- MOUSE (Desktop) ---
+    let mouseDown = false;
+
+    li.addEventListener("mousedown", e => {
+        mouseDown = true;
         startX = e.clientX;
-        dragging = true;
-        li.setPointerCapture(e.pointerId);
         li.style.transition = "none";
     });
 
-    li.addEventListener("pointermove", e => {
-        if (!dragging) return;
+    document.addEventListener("mousemove", e => {
+        if (!mouseDown) return;
         dx = e.clientX - startX;
         if (dx < 0) {
             li.style.setProperty("--swipeX", dx + "px");
         }
     });
 
-    li.addEventListener("pointerup", () => {
-        dragging = false;
+    document.addEventListener("mouseup", () => {
+        if (!mouseDown) return;
+        mouseDown = false;
+        finishSwipe();
+    });
+
+    function finishSwipe() {
         li.style.transition = "";
 
         if (dx < -100) {
             li.classList.add("remove");
             setTimeout(() => {
-                list.removeChild(li);
+                if (li.parentNode) li.parentNode.removeChild(li);
             }, 300);
 
             tasks = tasks.filter(t => t !== taskText);
@@ -162,16 +187,16 @@ function enableSwipe(li, taskText) {
         } else {
             li.style.setProperty("--swipeX", "0px");
         }
-    });
+
+        dx = 0;
+    }
 }
 
 function createTask(text) {
     const li = document.createElement("li");
     li.textContent = text;
-
     list.appendChild(li);
     enableSwipe(li, text);
-
     requestAnimationFrame(() => li.classList.add("show"));
 }
 
@@ -190,4 +215,3 @@ addBtn.onclick = () => {
 
 </body>
 </html>
-
