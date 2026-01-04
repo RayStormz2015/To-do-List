@@ -133,7 +133,6 @@ function enableSwipe(li, taskText) {
     let startX = 0;
     let dx = 0;
 
-    // --- TOUCH (iOS) ---
     li.addEventListener("touchstart", e => {
         startX = e.touches[0].clientX;
         li.style.transition = "none";
@@ -141,16 +140,11 @@ function enableSwipe(li, taskText) {
 
     li.addEventListener("touchmove", e => {
         dx = e.touches[0].clientX - startX;
-        if (dx < 0) {
-            li.style.setProperty("--swipeX", dx + "px");
-        }
+        if (dx < 0) li.style.setProperty("--swipeX", dx + "px");
     }, { passive: true });
 
-    li.addEventListener("touchend", () => {
-        finishSwipe();
-    });
+    li.addEventListener("touchend", finishSwipe);
 
-    // --- MOUSE (Desktop) ---
     let mouseDown = false;
 
     li.addEventListener("mousedown", e => {
@@ -162,9 +156,7 @@ function enableSwipe(li, taskText) {
     document.addEventListener("mousemove", e => {
         if (!mouseDown) return;
         dx = e.clientX - startX;
-        if (dx < 0) {
-            li.style.setProperty("--swipeX", dx + "px");
-        }
+        if (dx < 0) li.style.setProperty("--swipeX", dx + "px");
     });
 
     document.addEventListener("mouseup", () => {
@@ -178,24 +170,46 @@ function enableSwipe(li, taskText) {
 
         if (dx < -100) {
             li.classList.add("remove");
-            setTimeout(() => {
-                if (li.parentNode) li.parentNode.removeChild(li);
-            }, 300);
+            setTimeout(() => li.remove(), 300);
 
             tasks = tasks.filter(t => t !== taskText);
             localStorage.setItem("tasks", JSON.stringify(tasks));
         } else {
             li.style.setProperty("--swipeX", "0px");
         }
-
         dx = 0;
     }
 }
 
 function createTask(text) {
     const li = document.createElement("li");
-    li.textContent = text;
+
+    const taskText = document.createElement("div");
+    taskText.textContent = text;
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "btnRow";
+
+    const clearBtn = document.createElement("button");
+    clearBtn.className = "clearBtn";
+    clearBtn.textContent = "Clear Task";
+
+    clearBtn.onclick = () => {
+        const confirmed = confirm("Are you sure you want to clear this task?");
+        if (!confirmed) return;
+
+        li.classList.add("remove");
+        setTimeout(() => li.remove(), 300);
+
+        tasks = tasks.filter(t => t !== text);
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+    };
+
+    btnRow.appendChild(clearBtn);
+    li.appendChild(taskText);
+    li.appendChild(btnRow);
     list.appendChild(li);
+
     enableSwipe(li, text);
     requestAnimationFrame(() => li.classList.add("show"));
 }
@@ -215,3 +229,4 @@ addBtn.onclick = () => {
 
 </body>
 </html>
+
