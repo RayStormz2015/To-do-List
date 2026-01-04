@@ -166,19 +166,29 @@ function enableSwipe(li, taskText) {
     });
 
     function finishSwipe() {
-        li.style.transition = "";
+    li.style.transition = "";
 
-        if (dx < -100) {
-            li.classList.add("remove");
-            setTimeout(() => li.remove(), 300);
-
-            tasks = tasks.filter(t => t !== taskText);
-            localStorage.setItem("tasks", JSON.stringify(tasks));
-        } else {
+    if (dx < -100) {
+        const confirmed = confirm("Are you sure you want to clear this task?");
+        if (!confirmed) {
             li.style.setProperty("--swipeX", "0px");
+            dx = 0;
+            return;
         }
-        dx = 0;
+
+        li.classList.add("remove");
+        setTimeout(() => {
+            if (li.parentNode) li.remove();
+        }, 300);
+
+        tasks = tasks.filter(t => t !== taskText);
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+    } else {
+        li.style.setProperty("--swipeX", "0px");
     }
+
+    dx = 0;
+}
 }
 
 function createTask(text) {
@@ -229,4 +239,5 @@ addBtn.onclick = () => {
 
 </body>
 </html>
+
 
