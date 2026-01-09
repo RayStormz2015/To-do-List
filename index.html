@@ -117,6 +117,7 @@ input {
     <div id="syncCodeDisplay"></div>
     <button onclick="generateSyncCode()">Generate Sync Code</button>
     <button onclick="enterSyncCode()">Enter Sync Code</button>
+    <button onclick="stopSync()">Stop Sync</button>
 </div>
 
 <ul id="tasklist"></ul>
@@ -190,6 +191,24 @@ function updateSyncUI() {
         syncId ? "Connected with sync code" : "Not synced";
 }
 
+function stopSync() {
+    const confirmed = confirm(
+        "Stop syncing on this device?\n\nYour tasks will remain locally."
+    );
+    if (!confirmed) return;
+
+    // Remove sync link
+    localStorage.removeItem("syncId");
+
+    // Keep tasks locally
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+
+    syncId = null;
+    updateSyncUI();
+
+    alert("Sync stopped on this device.");
+}
+
 /* =======================
    📝 TODO LOGIC (UNCHANGED)
 ======================= */
@@ -240,3 +259,4 @@ loadTasks();
 
 </body>
 </html>
+
