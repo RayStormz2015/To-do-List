@@ -3,183 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My To-Do List with Sync</title>
-<link rel="icon" type="image/png" href="favicon.png">
-
+<title>To-Do List (Single File)</title>
 <style>
-* { box-sizing: border-box; touch-action: manipulation; }
-body { font-family: Arial, sans-serif; padding: 16px; max-width: 600px; margin: auto; }
-h1 { text-align: center; margin-bottom: 20px; }
-p { font-size: 20px; }
-ul { list-style: none; padding: 0; }
-li {
-  --swipeX: 0px;
-  margin: 12px 0;
-  padding: 14px;
-  background-color: #f4f4f4;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 18px;
-  opacity: 0;
-  transform: translateY(15px) scale(0.98) translateX(var(--swipeX));
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  will-change: transform, opacity;
-  touch-action: pan-y;
-}
-li.show { opacity: 1; transform: translateY(0) scale(1) translateX(var(--swipeX)); }
-li.remove { opacity: 0; transform: translateX(-120%) scale(0.95); }
-.btnRow { display: flex; gap: 10px; margin-bottom:10px; }
-button { flex: 1; min-height: 44px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.15s ease; }
-button:active { transform: scale(0.95); }
-.deadlineBtn { background-color: #333; color: white; }
-.clearBtn { background-color: red; color: white; }
-input { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; }
-#addBtn { width: 100%; padding: 14px; font-size: 18px; background-color: #007bff; color: white; border-radius: 10px; }
+body { font-family: Arial; max-width:600px; margin:auto; padding:16px; }
+ul { list-style:none; padding:0; }
+li { margin:8px 0; padding:8px; background:#eee; border-radius:6px; }
+button { margin:4px; }
 </style>
 </head>
 <body>
+<h1>To-Do List</h1>
 
-<h1>My To-Do List with Sync</h1>
+<ul id="list"></ul>
 
-<div class="btnRow">
-  <button onclick="generateSync()">Generate Sync Code</button>
-  <button onclick="joinSync()">Enter Sync Code</button>
-  <button onclick="stopSync()" class="clearBtn">Stop Sync</button>
-</div>
-
-<ul id="tasklist"></ul>
-
-<p>Add your task:</p>
-<input id="newTask" placeholder="Type your task here">
-<button id="addBtn">Add Task</button>
+<input id="task" placeholder="Task">
+<button id="add">Add</button>
+<button onclick="exportTasks()">Export Tasks</button>
+<button onclick="importTasks()">Import Tasks</button>
 
 <script>
-const input = document.getElementById("newTask");
-const addBtn = document.getElementById("addBtn");
-const list = document.getElementById("tasklist");
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+const list = document.getElementById("list");
+const input = document.getElementById("task");
 
-// --- Swipe / remove logic ---
-function enableSwipe(li, taskText) {
-    let startX = 0, dx = 0;
-    li.addEventListener("touchstart", e => { startX = e.touches[0].clientX; li.style.transition = "none"; }, { passive:true });
-    li.addEventListener("touchmove", e => { dx = e.touches[0].clientX - startX; if(dx<0) li.style.setProperty("--swipeX", dx+"px"); }, {passive:true});
-    li.addEventListener("touchend", finishSwipe);
-
-    let mouseDown = false;
-    li.addEventListener("mousedown", e => { mouseDown = true; startX = e.clientX; li.style.transition = "none"; });
-    document.addEventListener("mousemove", e => { if(!mouseDown) return; dx = e.clientX - startX; if(dx<0) li.style.setProperty("--swipeX", dx+"px"); });
-    document.addEventListener("mouseup", ()=> { if(!mouseDown) return; mouseDown=false; finishSwipe(); });
-
-    function finishSwipe() {
-        li.style.transition = "";
-        if(dx<-100) {
-            const confirmed = confirm("Are you sure you want to clear this task?");
-            if(!confirmed) { li.style.setProperty("--swipeX","0px"); dx=0; return; }
-            li.classList.add("remove");
-            setTimeout(()=>{ if(li.parentNode) li.remove(); }, 300);
-            tasks = tasks.filter(t=>t!==taskText);
-            localStorage.setItem("tasks", JSON.stringify(tasks));
-            sendSync();
-        } else li.style.setProperty("--swipeX","0px");
-        dx=0;
-    }
-}
-
-// --- Create / display tasks ---
-function createTask(text) {
-    const li = document.createElement("li");
-    const taskText = document.createElement("div");
-    taskText.textContent = text;
-    const btnRow = document.createElement("div"); btnRow.className="btnRow";
-
-    const clearBtn = document.createElement("button");
-    clearBtn.className="clearBtn"; clearBtn.textContent="Clear Task";
-    clearBtn.onclick=()=>{
-        const confirmed = confirm("Are you sure you want to clear this task?"); if(!confirmed) return;
-        li.classList.add("remove");
-        setTimeout(()=>li.remove(),300);
-        tasks = tasks.filter(t=>t!==text);
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        sendSync();
-    };
-
-    btnRow.appendChild(clearBtn);
-    li.appendChild(taskText);
-    li.appendChild(btnRow);
+function redraw() {
+  list.innerHTML = "";
+  tasks.forEach((t,i)=>{
+    const li=document.createElement("li");
+    li.textContent=t;
+    const btn=document.createElement("button");
+    btn.textContent="Delete";
+    btn.onclick=()=>{tasks.splice(i,1); save(); redraw();}
+    li.appendChild(btn);
     list.appendChild(li);
+  });
+}
+function save(){ localStorage.setItem("tasks", JSON.stringify(tasks)); }
 
-    enableSwipe(li, text);
-    requestAnimationFrame(()=>li.classList.add("show"));
+document.getElementById("add").onclick=()=>{
+  const val = input.value.trim();
+  if(!val) return;
+  tasks.push(val);
+  save(); redraw();
+  input.value="";
 }
 
-// --- Redraw tasks (sync) ---
-function redrawTasks() {
-    list.innerHTML = "";
-    tasks.forEach(createTask);
+function exportTasks(){
+  prompt("Copy your sync code (JSON):", JSON.stringify(tasks));
 }
 
-// --- Add task ---
-addBtn.onclick = ()=>{
-    const text=input.value.trim(); if(!text) return;
-    tasks.push(text);
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-    createTask(text);
-    sendSync();
-    input.value="";
-};
-
-tasks.forEach(createTask);
-
-// --- SYNC LOGIC ---
-let syncCode = null;
-let source = null;
-
-function generateSync() {
-    fetch("http://localhost:3000/create")
-        .then(r=>r.text())
-        .then(code=>{
-            syncCode=code;
-            alert("Sync Code: "+code);
-            connectSync();
-        });
+function importTasks(){
+  const json = prompt("Paste sync code here:");
+  if(!json) return;
+  try{
+    tasks = JSON.parse(json);
+    save(); redraw();
+  }catch(e){ alert("Invalid code"); }
 }
 
-function joinSync() {
-    const code = prompt("Enter Sync Code:");
-    if(!code) return;
-    syncCode=code.toUpperCase();
-    connectSync();
-}
-
-function connectSync() {
-    if(source) source.close();
-    source = new EventSource("http://localhost:3000/join?code="+syncCode);
-    source.onmessage = e=>{
-        tasks = JSON.parse(e.data);
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        redrawTasks();
-    };
-}
-
-function stopSync() {
-    if(!syncCode) return;
-    fetch("http://localhost:3000/stop?code="+syncCode);
-    source?.close();
-    syncCode=null;
-}
-
-function sendSync() {
-    if(!syncCode) return;
-    fetch("http://localhost:3000/sync", {
-        method:"POST",
-        body: JSON.stringify({ code: syncCode, tasks })
-    });
-}
+redraw();
 </script>
-
 </body>
 </html>
 
